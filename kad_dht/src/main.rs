@@ -2,17 +2,18 @@ use async_std::{io, task};
 use futures::{prelude::*, select};
 use libp2p::kad::record::store::MemoryStore;
 use libp2p::kad::{
-    record::Key, Kademlia,
+    record::Key, Kademlia, KademliaConfig,
     Quorum, Record,
 };
 use libp2p::{
     development_transport, Swarm, mdns::{Mdns, MdnsConfig}, swarm::{SwarmEvent},
 };
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 mod peer;
 use peer::network_config::network::MyBehaviour;
 use peer::peer_construct::construct::Peer;
+use peer::find_my_peers::finding;
 
 #[async_std::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -26,9 +27,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     //Create a swarm to manage peers and events.
     let mut swarm = {
-        // Create a Kademlia behaviour.
+        let mut cfg = KademliaConfig::default();
+        cfg.set_query_timeout(Duration::from_secs(5 * 60));
         let store = MemoryStore::new(peer.local_peer_id);
-        let kademlia = Kademlia::new(peer.local_peer_id, store);
+        let kademlia = Kademlia::with_config(peer.local_peer_id, store, cfg);
+
+        // Create a Kademlia behaviour.
+        //let store = MemoryStore::new(peer.local_peer_id);
+        //let kademlia = Kademlia::new(peer.local_peer_id, store);
         let mdns = task::block_on(Mdns::new(MdnsConfig::default()))?;
         let behaviour = MyBehaviour { kademlia, mdns };
         Swarm::new(transport, behaviour, peer.local_peer_id)
@@ -36,7 +42,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Read full lines from stdin
     let mut stdin = io::BufReader::new(io::stdin()).lines().fuse();
-    println!("reading input lines");
 
     // Listen on all interfaces and whatever port the OS assigns.
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
@@ -45,7 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Kick it off.
     loop {
         select! {
-            line = stdin.select_next_some() => handle_input_line(&mut swarm.behaviour_mut().kademlia, line.expect("Stdin not to close")),
+            line = stdin.select_next_some() => handle_input_line(line.expect("Stdin not to close"), &mut swarm),
             event = swarm.select_next_some() => match event {
                 SwarmEvent::NewListenAddr { address, .. } => {
                     println!("Listening in {:?}", address);
@@ -57,12 +62,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn handle_input_line(kademlia: &mut Kademlia<MemoryStore>, line: String) {
+fn handle_input_line(line: String, swarm: &mut Swarm<MyBehaviour>) {
+
+    let kademlia: &mut Kademlia<MemoryStore> = &mut swarm.behaviour_mut().kademlia;
 
     println!("handle_input_line");
     let mut args = line.split(' ');
 
     match args.next() {
+        /*Some("FIND") => {
+            let other_event = swarm.select_next_some().await;
+            let id = {
+                match args.next() {
+                    Some(id) => {
+                        finding::search(String::from(id), swarm);
+                        return;
+                    },
+                    None => {
+                        eprintln!("Expected peerID");
+                        return;
+                    }
+                }
+            };
+        }*/
+        Some("LIST_PEERS") => {
+            finding::list_peers(swarm);
+        }
+
         Some("GET") => {
             let key = {
                 match args.next() {

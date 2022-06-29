@@ -8,6 +8,7 @@ pub mod network{
         swarm::{NetworkBehaviourEventProcess},
         NetworkBehaviour,
     };
+    use crate::peer::find_my_peers::finding;
 
     // We create a custom network behaviour that combines Kademlia and mDNS.
     #[derive(NetworkBehaviour)]
@@ -35,6 +36,9 @@ pub mod network{
         fn inject_event(&mut self, message: KademliaEvent) {
             match message {
                 KademliaEvent::OutboundQueryCompleted { result, .. } => match result {
+                    QueryResult::GetClosestPeers(result) => {
+                        finding::search(result);
+                    },
                     QueryResult::GetProviders(Ok(ok)) => {
                         for peer in ok.providers {
                             println!(
