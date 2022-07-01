@@ -1,0 +1,22 @@
+[package]
+name = "ggrs_kad"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.7.0"}#revert dyn before releasing game
+libp2p = "0.45.1"
+env_logger = "0.9.0"
+async-std = {version = "1.9.0", features = ["attributes"]}
+futures = "0.3.21"
+ggrs = {version ="0.9.1", features = ["sync-send"]}
+bevy_ggrs = "0.9.0"
+bytemuck = "1.7"
+#bytemuck = { version = "1.7", features=["derive"]}
+structopt = "0.3.26"
+# bevy_app = "0.7.0"
+# instant = "0.1"
+# log = "0.4"
+#ggrs = { git = "https://github.com/gschup/ggrs", features=["sync-send"]}
