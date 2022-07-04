@@ -51,7 +51,7 @@ fn print_network_stats_system(
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // read cmd line arguments
     let opt = Opt::from_args();
-    let num_players = opt.players.len();
+    let num_players = opt.players.len(); //number of discovered peers
     assert!(num_players > 0);
 
     // create a GGRS session
@@ -63,11 +63,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // add players
     for (i, player_addr) in opt.players.iter().enumerate() {
         // local player
-        if player_addr == "localhost" {
+        if player_addr == "localhost" { //receive my listening on address
             sess_build = sess_build.add_player(PlayerType::Local, i)?;
         } else {
             // remote players
-            let remote_addr: SocketAddr = player_addr.parse()?;
+            let remote_addr: SocketAddr = player_addr.parse()?; //receive addr of discovered peers
             sess_build = sess_build.add_player(PlayerType::Remote(remote_addr), i)?;
         }
     }
@@ -78,6 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // start the GGRS session
+     
+    //let socket = UdpNonBlockingSocket::bind_to_port("/ip4/0.0.0.0/udp/0/quic")?;
     let socket = UdpNonBlockingSocket::bind_to_port(opt.local_port)?;
     let sess = sess_build.start_p2p_session(socket)?;
 
@@ -105,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // continue building/running the app like you normally would
     app.insert_resource(Msaa { samples: 4 })
-        .insert_resource(WindowDescriptor {
+        .insert_resource(WindowDescriptor { //must come before default plugin
             width: 720.,
             height: 720.,
             title: "GGRS Box Game".to_owned(),
@@ -131,3 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+// cargo run -- --local-port 7000 --players localhost 127.0.0.1:7001
+// cargo run -- --local-port 7001 --players 127.0.0.1:7000 localhost
+
+//every terminal must run with same order of players (bc of handle controlling moves)
